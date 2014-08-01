@@ -76,7 +76,7 @@ public class CodeCount {
 
 
     public static void main(String[] args) throws IOException {
-        Path path = Paths.get("D:\\Documents\\GitHub\\datahub\\crawlerbolt\\");
+        Path path = Paths.get("E:\\Documents\\GitHub\\datahub");
 
         System.out.println( CodeCount.codeCount(path));
     }

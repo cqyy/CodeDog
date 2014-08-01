@@ -1,19 +1,21 @@
 package codecount;
 
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by Administrator on 2014/7/31.
  */
 public class CodeCounter {
-
-
-    private final PackageNode root = new PackageNode( "","",null);
+    private final PackageNode root = new PackageNode( "/","/",null);
     private Set<String> clazzes = new TreeSet<>();
 
     public void addClazz(String packageName,String clazzName,Counter counter){
         if (clazzes.add(packageName + "." + clazzName)){
-            root.addChild(packageName.split("\\."),0,counter);
+            root.addChild(packageName.split("\\."),0,clazzName,counter);
         }
     }
 
@@ -39,11 +41,35 @@ public class CodeCounter {
         }
     }
 
+    public static class Clazz implements Comparable<Clazz>{
+        private String className;
+        private Counter counter;
+
+        public Clazz(String className,Counter counter){
+            this.className = className;
+            this.counter = new Counter();
+            this.counter.add(counter);
+        }
+
+        @Override
+        public int compareTo(Clazz o) {
+            return className.compareTo(o.className);
+        }
+
+        public JSONObject toJson(){
+            JSONObject json = new JSONObject();
+            json.put("name",className);
+            json.put("size",counter.codes);
+            return json;
+        }
+    }
+
     private class PackageNode{
         private String packageName;
         private String fullName;
         private final Counter codeCounter = new Counter();
         private final HashMap<String,PackageNode> children = new HashMap<>();
+        private final Set<Clazz> classes = new TreeSet<>();
         private final PackageNode parent;
 
         public PackageNode(String packageName,String fullName,PackageNode parent){
@@ -53,8 +79,9 @@ public class CodeCounter {
         }
 
 
-        public void addChild(String[] packageNames,int offset,Counter counter){
+        public void addChild(String[] packageNames,int offset,String className,Counter counter){
             this.codeCounter.add(counter);
+
             if (offset >= packageNames.length){
                 return;
             }
@@ -68,10 +95,22 @@ public class CodeCounter {
                 }
                 fullName = fullName.substring(0,fullName.length()-1);       //remove last "."
                 node = new PackageNode(childName,fullName,this);
+
                 children.put(childName,node);
             }
+            if (offset == packageNames.length -1){
+                Clazz clazz = new Clazz(className,counter);
+                node.classes.add(clazz);
+            }
+            node.addChild(packageNames,offset+1,className,counter);
+        }
 
-            node.addChild(packageNames,offset+1,counter);
+        public boolean hasChild(){
+            return children.size() != 0;
+        }
+
+        public boolean hasClass(){
+            return classes.size() != 0;
         }
 
         @Override
@@ -97,5 +136,26 @@ public class CodeCounter {
             sb.append(node).append(sp);
         }
         return sb.toString();
+    }
+
+    public final String toJson(){
+        return toJson(root).toJSONString();
+    }
+
+    private JSONObject toJson(PackageNode node){
+        JSONObject json = new JSONObject();
+        json.put("name",node.packageName);
+        if (node.hasChild() || node.hasClass()){
+            JSONArray array = new JSONArray();
+            if (node.hasChild()){
+                node.children.values().stream().map(this::toJson)
+                    .collect(Collectors.toCollection(() -> array));
+            }
+            if (node.hasClass()){
+                node.classes.forEach((clazz)->array.add(clazz.toJson()));
+            }
+            json.put("children",array);
+        }
+        return json;
     }
 }

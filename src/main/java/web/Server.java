@@ -10,7 +10,7 @@ import org.mortbay.http.handler.ResourceHandler;
 /**
  * Created by Kali on 14-7-31.
  */
-public class Test {
+public class Server  {
     public static void main(String[] args) {
         HttpServer server = new HttpServer();
         SocketListener listener = new SocketListener();
